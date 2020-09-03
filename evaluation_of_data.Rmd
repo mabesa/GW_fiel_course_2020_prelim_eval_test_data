@@ -1,0 +1,124 @@
+---
+title: "Prelim. eval. of GW tests on Hönggerberg"
+author: "Beatrice Marti"
+date: "9/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library('tidyverse')
+
+# Options
+options(digits.secs = 3)
+```
+
+# Slug test
+```{r slug-test-raw, echo=FALSE, message=FALSE, warning=FALSE}
+# Get data into shape
+data_slug <- read.table('SlugTest_200903.csv', sep=';', skip=5,
+                        na.strings='#NV', header=TRUE, 
+                        col.names=c('Time_p','p_bar','Time_T','T_degC','X')) %>%
+  select(-X) %>%
+  mutate(Time_p=as.POSIXct(Time_p,format='%d.%m.%Y %H:%M:%OS'),
+         Time_T=as.POSIXct(Time_T,format='%d.%m.%Y %H:%M:%OS')) %>%
+  drop_na()
+
+ggplot(data_slug) +
+  geom_point(aes(Time_p,p_bar),size=0.2) + 
+  ggtitle('Raw data') + 
+  theme_bw()
+```
+
+```{r slug-test, echo=FALSE}
+# Process time series for evaluation
+data_slug <- data_slug %>%
+  mutate(label=if_else(Time_p<=as.POSIXct("2020-09-03 15:35:57"),'baseline',
+                       if_else(Time_p>=as.POSIXct("2020-09-03 15:36:11"),'test',
+                       'NA')))
+h0_slug <- data_slug %>%
+  filter(label=='baseline') %>%
+  select(p_bar) %>% 
+  colMeans()
+
+ht_slug <- data_slug %>%
+  filter(label=='test') %>%
+  select(Time_p,p_bar) %>%
+  mutate(dp_bar=p_bar-h0_slug,
+         dt=c(0,diff(Time_p,lag=1)),
+         Time_s=cumsum(dt)) %>%
+  filter(Time_s>0)
+
+ggplot(ht_slug) +
+  geom_point(aes(Time_s,dp_bar),size=0.2) + 
+  scale_x_continuous(trans='log10') + 
+  ggtitle('Semi-log-plot of pressure change over time') + 
+  theme_bw()
+```
+
+# Recovery test
+```{r recovery-test-raw, echo=FALSE, message=FALSE, warning=FALSE}
+# Get data into shape
+data_reco <- read.table('RecoveryTest_200903.csv', sep=';', skip=5,
+                        na.strings='#NV', header=TRUE, 
+                        col.names=c('Time_p','p_bar','Time_T','T_degC','X')) %>%
+  select(-X) %>%
+  mutate(Time_p=as.POSIXct(Time_p,format='%d.%m.%Y %H:%M:%OS'),
+         Time_T=as.POSIXct(Time_T,format='%d.%m.%Y %H:%M:%OS')) %>%
+  drop_na()
+
+ggplot(data_reco) +
+  geom_point(aes(Time_p,p_bar),size=0.2) + 
+  ggtitle('Raw data') + 
+  theme_bw()
+```
+```{r recovery-test, echo=FALSE}
+# Process time series for evaluation
+data_reco <- data_reco %>%
+  mutate(label=if_else(Time_p<=as.POSIXct("2020-09-03 16:22"),'baseline',
+                       if_else(Time_p>=as.POSIXct("2020-09-03 16:24"),'test',
+                       'NA')))
+h0_reco <- data_reco %>%
+  filter(label=='baseline') %>%
+  select(p_bar) %>% 
+  colMeans()
+
+ht_reco <- data_reco %>%
+  filter(label=='test') %>%
+  select(Time_p,p_bar) %>%
+  mutate(dp_bar=p_bar-h0_reco,
+         dt=c(0,diff(Time_p,lag=1)),
+         Time_s=cumsum(dt)) %>%
+  filter(Time_s>0)
+
+ggplot(ht_reco) +
+  geom_point(aes(Time_s,dp_bar),size=0.2) + 
+  scale_x_continuous(trans='log10') + 
+  ggtitle('Semi-log-plot of pressure change over time') + 
+  theme_bw()
+```
+
+# Dilution test
+```{r dilution-test-raw, echo=FALSE, message=FALSE, warning=FALSE}
+# Get data into shape
+data_dilu <- read.table('AC858807.CSV', sep=';', header=TRUE,
+                        colClasses=c(NULL,NULL,NULL,'character','character',
+                                     'character','character','character',
+                                     'character','character',NULL,NULL,NULL,
+                                     NULL,NULL)) %>%
+  select(Date.Time,Value,Unit,Mode,Value2,Unit2,Mode2) %>%
+  mutate(Time=as.POSIXct(Date.Time,format='%d.%m.%Y %H:%M:%OS'),
+         Value=as.numeric(Value)) %>%
+  select(-Date.Time) %>%
+  drop_na()
+
+ggplot(data_dilu) +
+  geom_point(aes(Time,Value),size=0.2) + 
+  ggtitle('Raw data') + 
+  ylab('EC [micro S/cm]') +
+  theme_bw()
+
+```
+
+
